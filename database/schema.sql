@@ -1,11 +1,11 @@
 CREATE TABLE Orders (
-    orderId INT PRIMARY KEY,
+    orderId TEXT PRIMARY KEY,
     value DECIMAL(10,2),
     creationDate TIMESTAMP
 );
 
 CREATE TABLE Items (
-    orderId INT,
+    orderId TEXT,
     productId INT,
     quantity INT,
     price DECIMAL(10,2),
