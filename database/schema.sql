@@ -10,7 +10,7 @@ CREATE TABLE Items (
     quantity INT,
     price DECIMAL(10,2),
     PRIMARY KEY (orderId, productId),
-    FOREIGN KEY (orderId) REFERENCES "Order"(orderId)
+    FOREIGN KEY (orderId) REFERENCES Orders(orderId)
 );
 
 INSERT INTO Orders (orderId, value, creationDate) VALUES
