@@ -5,13 +5,47 @@ const app = express();
 
 app.use(express.json());
 
+/* FUNÇÃO DE MAPPING ITEM (BANCO -> API) */
+function mapItem(item) {
+  return {
+    idItem: item.productid,
+    quantidadeItem: item.quantity,
+    valorItem: item.price
+  };
+}
+
+/* FUNÇÃO DE MAPPING ORDER (BANCO -> API) */
+function mapOrder(order, items) {
+  return {
+    numeroPedido: order.orderid,
+    valorTotal: order.value,
+    dataCriacao: order.creationdate,
+    items: items.map(mapItem)
+  };
+}
+
 /* LISTAR TODOS PEDIDOS */
 app.get("/orders", async (req, res) => {
   try {
 
-    const result = await pool.query("SELECT * FROM Orders");
+    const ordersResult = await pool.query("SELECT * FROM Orders");
 
-    res.json(result.rows);
+    const orders = [];
+
+    for (const order of ordersResult.rows) {
+
+      const itemsResult = await pool.query(
+        "SELECT * FROM Items WHERE orderId = $1",
+        [order.orderid]
+      );
+
+      orders.push(
+        mapOrder(order, itemsResult.rows)
+      );
+
+    }
+
+    res.json(orders);
 
   } catch (error) {
 
@@ -27,20 +61,23 @@ app.get("/orders/:id", async (req, res) => {
 
     const id = req.params.id;
 
-    const order = await pool.query(
+    const orderResult = await pool.query(
       "SELECT * FROM Orders WHERE orderId = $1",
       [id]
     );
 
-    const items = await pool.query(
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ message: "Pedido não encontrado" });
+    }
+
+    const itemsResult = await pool.query(
       "SELECT * FROM Items WHERE orderId = $1",
       [id]
     );
 
-    res.json({
-      order: order.rows[0],
-      items: items.rows
-    });
+    res.json(
+      mapOrder(orderResult.rows[0], itemsResult.rows)
+    );
 
   } catch (error) {
 
@@ -50,7 +87,7 @@ app.get("/orders/:id", async (req, res) => {
   }
 });
 
-/* CRIAR PEDIDO (COM MAPPING DO JSON DO TESTE) */
+/* CRIAR PEDIDO (MAPPING API -> BANCO) */
 app.post("/orders", async (req, res) => {
 
   const client = await pool.connect();
@@ -61,13 +98,11 @@ app.post("/orders", async (req, res) => {
 
     await client.query("BEGIN");
 
-    /* salvar pedido */
     await client.query(
       "INSERT INTO Orders (orderId, value, creationDate) VALUES ($1,$2,$3)",
       [numeroPedido, valorTotal, dataCriacao]
     );
 
-    /* salvar itens */
     for (const item of items) {
 
       await client.query(
@@ -116,7 +151,15 @@ app.put("/orders/:id", async (req, res) => {
       [valorTotal, id]
     );
 
-    res.json(result.rows[0]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Pedido não encontrado" });
+    }
+
+    res.json({
+      numeroPedido: result.rows[0].orderid,
+      valorTotal: result.rows[0].value,
+      dataCriacao: result.rows[0].creationdate
+    });
 
   } catch (error) {
 
