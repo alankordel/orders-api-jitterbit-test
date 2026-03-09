@@ -1,9 +1,13 @@
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./swagger");
+
 const express = require("express");
 const pool = require("./db/connection");
 
 const app = express();
 
 app.use(express.json());
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 /* FUNÇÃO DE MAPPING ITEM (BANCO -> API) */
 function mapItem(item) {
@@ -24,7 +28,16 @@ function mapOrder(order, items) {
   };
 }
 
-/* LISTAR TODOS PEDIDOS */
+/**
+ * @swagger
+ * /orders:
+ *   get:
+ *     summary: Listar todos os pedidos
+ *     tags: [Orders]
+ *     responses:
+ *       200:
+ *         description: Lista de pedidos
+ */
 app.get("/orders", async (req, res) => {
   try {
 
@@ -55,7 +68,25 @@ app.get("/orders", async (req, res) => {
   }
 });
 
-/* BUSCAR PEDIDO POR ID */
+/**
+ * @swagger
+ * /orders/{id}:
+ *   get:
+ *     summary: Buscar pedido pelo número
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Número do pedido
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pedido encontrado
+ *       404:
+ *         description: Pedido não encontrado
+ */
 app.get("/orders/:id", async (req, res) => {
   try {
 
@@ -87,7 +118,40 @@ app.get("/orders/:id", async (req, res) => {
   }
 });
 
-/* CRIAR PEDIDO (MAPPING API -> BANCO) */
+/**
+ * @swagger
+ * /orders:
+ *   post:
+ *     summary: Criar um novo pedido
+ *     tags: [Orders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               numeroPedido:
+ *                 type: string
+ *               valorTotal:
+ *                 type: number
+ *               dataCriacao:
+ *                 type: string
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     idItem:
+ *                       type: string
+ *                     quantidadeItem:
+ *                       type: number
+ *                     valorItem:
+ *                       type: number
+ *     responses:
+ *       201:
+ *         description: Pedido criado com sucesso
+ */
 app.post("/orders", async (req, res) => {
 
   const client = await pool.connect();
@@ -138,17 +202,42 @@ app.post("/orders", async (req, res) => {
 
 });
 
-/* ATUALIZAR PEDIDO */
+/**
+ * @swagger
+ * /orders/{id}:
+ *   put:
+ *     summary: Atualizar valor do pedido
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Número do pedido
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               valorTotal:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Pedido atualizado
+ */
 app.put("/orders/:id", async (req, res) => {
 
   try {
 
     const id = req.params.id;
-    const { valorTotal, quantidadeItem } = req.body;
+    const { valorTotal } = req.body;
 
     const result = await pool.query(
       "UPDATE Orders SET value = $1 WHERE orderId = $2 RETURNING *",
-      [valorTotal, quantidadeItem, id]
+      [valorTotal, id]
     );
 
     if (result.rows.length === 0) {
@@ -170,7 +259,23 @@ app.put("/orders/:id", async (req, res) => {
 
 });
 
-/* DELETAR PEDIDO */
+/**
+ * @swagger
+ * /orders/{id}:
+ *   delete:
+ *     summary: Deletar pedido
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Número do pedido
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pedido deletado
+ */
 app.delete("/orders/:id", async (req, res) => {
 
   try {
