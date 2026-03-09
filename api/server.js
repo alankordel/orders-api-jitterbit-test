@@ -144,11 +144,11 @@ app.put("/orders/:id", async (req, res) => {
   try {
 
     const id = req.params.id;
-    const { valorTotal } = req.body;
+    const { valorTotal, quantidadeItem } = req.body;
 
     const result = await pool.query(
       "UPDATE Orders SET value = $1 WHERE orderId = $2 RETURNING *",
-      [valorTotal, id]
+      [valorTotal, quantidadeItem, id]
     );
 
     if (result.rows.length === 0) {
